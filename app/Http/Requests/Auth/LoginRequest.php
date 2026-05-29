@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Carbon\Carbon; 
 
 class LoginRequest extends FormRequest
 {
@@ -42,6 +43,43 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
+       
+        if (! Auth::validate($this->only('email', 'password'))) {
+            RateLimiter::hit($this->throttleKey());
+
+            throw ValidationException::withMessages([
+                'email' => trans('auth.failed'),
+            ]);
+        }
+
+     
+        $user = \App\Models\User::where('email', $this->input('email'))->first();
+
+        
+        if ($user && !$user->isAdmin()) {
+            
+            $now = Carbon::now('Asia/Colombo');
+            
+            
+            $startTimeString = $user->allowed_from ?? '08:00:00';
+            $endTimeString = $user->allowed_to ?? '18:00:00';
+
+            $allowedFrom = Carbon::createFromFormat('H:i:s', $startTimeString, 'Asia/Colombo');
+            $allowedTo = Carbon::createFromFormat('H:i:s', $endTimeString, 'Asia/Colombo');
+
+            
+            if (!$now->between($allowedFrom, $allowedTo)) {
+                RateLimiter::hit($this->throttleKey());
+
+             
+                throw ValidationException::withMessages([
+                    'email' => 'Access denied! Your allowed login window is between ' . 
+                               $allowedFrom->format('h:i A') . ' and ' . $allowedTo->format('h:i A') . '.',
+                ]);
+            }
+        }
+
+      
         if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey());
 

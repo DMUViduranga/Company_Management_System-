@@ -5,34 +5,41 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Illuminate\Support\Facades\Auth; 
 use Carbon\Carbon;
 
 class WorkingHoursMiddleware
 {
     public function handle(Request $request, Closure $next): Response
     {
-      
-        if ($request->user() && $request->user()->isAdmin()) {
+        $user = $request->user();
+
+        
+        if (!$user || $user->isAdmin()) {
             return $next($request);
         }
 
+        $now = Carbon::now('Asia/Colombo');
+
+        $startTimeString = $user->allowed_from ?? '08:00:00';
+        $endTimeString = $user->allowed_to ?? '18:00:00';
+
+        $allowedFrom = Carbon::createFromFormat('H:i:s', $startTimeString, 'Asia/Colombo');
+        $allowedTo = Carbon::createFromFormat('H:i:s', $endTimeString, 'Asia/Colombo');
+
        
-        $now  = Carbon::now('Asia/Colombo');
-        $hour = (int) $now->format('G'); // 0-23
+        if (!$now->between($allowedFrom, $allowedTo)) {
+            
+            
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
 
-        $accessStart = 8;  // 08:00 AM
-        $accessEnd   = 18; // 06:00 PM
-
-      
-        if ($hour < $accessStart || $hour >= $accessEnd) {
-            return response()->view('errors.restricted', [
-                'accessStart' => '08:00 AM',
-                'accessEnd'   => '06:00 PM',
-                'currentTime' => $now->format('h:i A'),
-                'nextAccess'  => $hour >= $accessEnd
-                    ? $now->copy()->addDay()->setTime($accessStart, 0)->format('D, d M Y \a\t h:i A')
-                    : $now->copy()->setTime($accessStart, 0)->format('D, d M Y \a\t h:i A'),
-            ], 403);
+            
+            return redirect()->route('login')->withErrors([
+                'email' => 'Session expired! Your allowed working hours are between ' . 
+                           $allowedFrom->format('h:i A') . ' and ' . $allowedTo->format('h:i A') . '.'
+            ]);
         }
 
         return $next($request);

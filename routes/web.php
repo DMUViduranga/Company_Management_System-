@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Livewire\SupplierManager;
 use App\Livewire\ContactManager;
 use App\Livewire\CategoryManager;
+use App\Livewire\UserAccessTimeManager;
 
 
 Route::get('/', function () {
@@ -22,7 +23,13 @@ Route::middleware(['auth', 'verified', 'working.hours'])->group(function () {
 
     //categories
     Route::get('/categories', CategoryManager::class)->name('categories');
-    
+
+    // Admin-only: Device Approvals
+    Route::get('/admin/device-approvals', function () {
+        return view('admin.device-approvals'); })->name('admin.device-approvals');
+        
+    // Admin-only: User Access Time Management
+    Route::get('/user-access-times', UserAccessTimeManager::class)->name('user-access-times');
 });
 
 

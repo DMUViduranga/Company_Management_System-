@@ -29,22 +29,38 @@ class ContactManager extends Component
     public string $email      = '';
     public string $phone      = '';
 
-    public function updatingSearch()        { $this->resetPage(); }
-    public function updatingCategoryFilter() { $this->resetPage(); }
-    public function updatingPerPage()       { $this->resetPage(); }
+    public string $categorySearch = '';
+
+    public function updatingSearch()
+    {
+        $this->resetPage();
+    }
+    public function updatingCategoryFilter()
+    {
+        $this->resetPage();
+    }
+    public function updatingPerPage()
+    {
+        $this->resetPage();
+    }
 
     //  DATA 
     public function getContactsProperty()
     {
         return Contact::with('category')
-            ->when($this->search, fn($q) =>
-                $q->where(fn($sub) =>
+            ->when(
+                $this->search,
+                fn($q) =>
+                $q->where(
+                    fn($sub) =>
                     $sub->where('name',  'like', "%{$this->search}%")
                         ->orWhere('email', 'like', "%{$this->search}%")
                         ->orWhere('phone', 'like', "%{$this->search}%")
                 )
             )
-            ->when($this->categoryFilter, fn($q) =>
+            ->when(
+                $this->categoryFilter,
+                fn($q) =>
                 $q->where('category_id', $this->categoryFilter)
             )
             ->latest()
@@ -53,7 +69,10 @@ class ContactManager extends Component
 
     public function getCategoriesProperty()
     {
-        return Category::orderBy('name')->get();
+        return Category::where('name', 'like', "%{$this->categorySearch}%")
+            ->orderBy('name')
+            ->take(10) 
+            ->get();
     }
 
     //  MODALS 
@@ -66,13 +85,15 @@ class ContactManager extends Component
 
     public function openEditModal(int $id)
     {
-        $contact = Contact::findOrFail($id);
+        $contact = Contact::with('category')->findOrFail($id);
 
         $this->contactId  = $contact->id;
         $this->categoryId = $contact->category_id;
         $this->name       = $contact->name;
         $this->email      = $contact->email;
         $this->phone      = $contact->phone;
+
+        $this->categorySearch = $contact->category ? $contact->category->name : '';
 
         $this->editMode  = true;
         $this->showModal = true;
@@ -102,7 +123,7 @@ class ContactManager extends Component
                 'email',
                 Rule::unique('contacts', 'email')->ignore($this->contactId),
             ],
-            'phone' => 'required',
+            'phone' => 'required|numeric|digits:10',
         ]);
 
         Contact::updateOrCreate(

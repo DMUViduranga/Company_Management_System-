@@ -29,7 +29,7 @@
                 }
 
                 .my-print-section {
-                
+
                     padding: 5mm 0mm 5mm 0mm !important;
                     overflow: visible !important;
                     height: auto !important;
@@ -81,7 +81,7 @@
                     }
                 }
 
-              
+
                 .print-preview-fixed-footer {
                     display: none !important;
                 }
