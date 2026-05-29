@@ -6,6 +6,7 @@ use App\Livewire\SupplierManager;
 use App\Livewire\ContactManager;
 use App\Livewire\CategoryManager;
 use App\Livewire\UserAccessTimeManager;
+use App\Http\Controllers\Admin\DeviceApprovalController;
 
 
 Route::get('/', function () {
@@ -13,7 +14,7 @@ Route::get('/', function () {
 });
 
 Route::middleware(['auth', 'verified', 'working.hours'])->group(function () {
-    
+
     // Dashboard (Supplier Manager)
     Route::get('/dashboard', SupplierManager::class)->name('dashboard');
     Route::get('/suppliers', SupplierManager::class)->name('suppliers');
@@ -24,12 +25,16 @@ Route::middleware(['auth', 'verified', 'working.hours'])->group(function () {
     //categories
     Route::get('/categories', CategoryManager::class)->name('categories');
 
-    // Admin-only: Device Approvals
-    Route::get('/admin/device-approvals', function () {
-        return view('admin.device-approvals'); })->name('admin.device-approvals');
-        
+    Route::get('/admin/device-approvals', [DeviceApprovalController::class, 'index'])->name('admin.device-approvals');
+
+ 
+    Route::post('/admin/device-approvals/{id}/approve', [DeviceApprovalController::class, 'approve'])->name('admin.devices.approve');
+
     // Admin-only: User Access Time Management
     Route::get('/user-access-times', UserAccessTimeManager::class)->name('user-access-times');
+
+   
+    Route::delete('/admin/device-approvals/{id}/revoke', [DeviceApprovalController::class, 'revoke'])->name('admin.devices.revoke');
 });
 
 
@@ -39,4 +44,4 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-require __DIR__.'/auth.php';
+require __DIR__ . '/auth.php';
